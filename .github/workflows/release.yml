@@ -1,0 +1,127 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: macos-15
+    permissions:
+      contents: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Import signing certificate
+        env:
+          CERTIFICATE_P12: ${{ secrets.CERTIFICATE_P12 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          CERTIFICATE_PATH=$RUNNER_TEMP/certificate.p12
+          KEYCHAIN_PATH=$RUNNER_TEMP/signing.keychain-db
+
+          echo -n "$CERTIFICATE_P12" | base64 --decode -o $CERTIFICATE_PATH
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+          security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security import $CERTIFICATE_PATH \
+            -P "$CERTIFICATE_PASSWORD" \
+            -A -t cert -f pkcs12 \
+            -k $KEYCHAIN_PATH
+
+          security set-key-partition-list \
+            -S apple-tool:,apple:,codesign: \
+            -s -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+
+          security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Build release archive
+        run: |
+          xcodebuild archive \
+            -project AirFidelity.xcodeproj \
+            -scheme AirFidelity \
+            -configuration Release \
+            -archivePath $RUNNER_TEMP/AirFidelity.xcarchive \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Developer ID Application" \
+            DEVELOPMENT_TEAM=${{ secrets.TEAM_ID }} \
+            OTHER_CODE_SIGN_FLAGS="--options runtime"
+
+      - name: Export app from archive
+        run: |
+          cat > $RUNNER_TEMP/export-options.plist << 'PLIST'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key>
+            <string>developer-id</string>
+            <key>signingStyle</key>
+            <string>manual</string>
+          </dict>
+          </plist>
+          PLIST
+
+          xcodebuild -exportArchive \
+            -archivePath $RUNNER_TEMP/AirFidelity.xcarchive \
+            -exportPath $RUNNER_TEMP/export \
+            -exportOptionsPlist $RUNNER_TEMP/export-options.plist
+
+      - name: Notarize app
+        env:
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_ID_PASSWORD: ${{ secrets.APPLE_ID_PASSWORD }}
+          TEAM_ID: ${{ secrets.TEAM_ID }}
+        run: |
+          xcrun notarytool store-credentials "notary-profile" \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APPLE_ID_PASSWORD"
+
+          ditto -c -k --keepParent \
+            "$RUNNER_TEMP/export/AirFidelity.app" \
+            "$RUNNER_TEMP/AirFidelity.zip"
+
+          xcrun notarytool submit "$RUNNER_TEMP/AirFidelity.zip" \
+            --keychain-profile "notary-profile" \
+            --wait
+
+          xcrun stapler staple "$RUNNER_TEMP/export/AirFidelity.app"
+
+      - name: Create DMG
+        run: |
+          mkdir -p $RUNNER_TEMP/dmg-contents
+          cp -R "$RUNNER_TEMP/export/AirFidelity.app" $RUNNER_TEMP/dmg-contents/
+          ln -s /Applications $RUNNER_TEMP/dmg-contents/Applications
+
+          hdiutil create \
+            -volname "AirFidelity" \
+            -srcfolder $RUNNER_TEMP/dmg-contents \
+            -ov -format UDZO \
+            "$RUNNER_TEMP/AirFidelity.dmg"
+
+      - name: Get version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          name: AirFidelity ${{ steps.version.outputs.version }}
+          files: ${{ runner.temp }}/AirFidelity.dmg
+          generate_release_notes: true
+
+      - name: Clean up keychain
+        if: always()
+        run: security delete-keychain $RUNNER_TEMP/signing.keychain-db

@@ -1,0 +1,48 @@
+name: AirFidelity
+
+options:
+  bundleIdPrefix: com.vincehopf
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "15.0"
+  defaultConfig: Release
+
+packages:
+  SimplyCoreAudio:
+    url: https://github.com/rnine/SimplyCoreAudio
+    from: 4.0.0
+
+targets:
+  AirFidelity:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+    resources:
+      - Resources
+    dependencies:
+      - package: SimplyCoreAudio
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        CODE_SIGN_STYLE: Automatic
+        PRODUCT_BUNDLE_IDENTIFIER: com.vincehopf.AirFidelity
+        GENERATE_INFOPLIST_FILE: true
+        INFOPLIST_KEY_LSUIElement: true
+        INFOPLIST_KEY_NSMicrophoneUsageDescription: "AirFidelity needs microphone access to detect when your Mac's audio input changes. No audio is recorded."
+    entitlements:
+      path: AirFidelity.entitlements
+
+  AirFidelityTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - Tests
+    dependencies:
+      - target: AirFidelity
+    settings:
+      base:
+        SWIFT_VERSION: "5.9"
+        MACOSX_DEPLOYMENT_TARGET: "14.0"
+        GENERATE_INFOPLIST_FILE: true
