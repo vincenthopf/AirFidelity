@@ -9,6 +9,9 @@ on:
 jobs:
   build-and-test:
     runs-on: macos-15
+    strategy:
+      matrix:
+        arch: [arm64, x86_64]
     steps:
       - uses: actions/checkout@v4
 
@@ -18,20 +21,24 @@ jobs:
       - name: Generate Xcode project
         run: xcodegen generate
 
-      - name: Build
+      - name: Build (${{ matrix.arch }})
         run: |
           xcodebuild build \
             -project AirFidelity.xcodeproj \
             -scheme AirFidelity \
             -configuration Debug \
             -destination 'platform=macOS' \
-            CODE_SIGN_IDENTITY=-
+            CODE_SIGN_IDENTITY=- \
+            ARCHS="${{ matrix.arch }}" \
+            ONLY_ACTIVE_ARCH=NO
 
-      - name: Test
+      - name: Test (${{ matrix.arch }})
         run: |
           xcodebuild test \
             -project AirFidelity.xcodeproj \
             -scheme AirFidelityTests \
             -configuration Debug \
             -destination 'platform=macOS' \
-            CODE_SIGN_IDENTITY=-
+            CODE_SIGN_IDENTITY=- \
+            ARCHS="${{ matrix.arch }}" \
+            ONLY_ACTIVE_ARCH=NO

@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 /// Settings window content, shown via Cmd+, or the gear icon in the popover.
 struct SettingsView: View {
@@ -52,22 +53,60 @@ private struct GeneralSettingsTab: View {
 
 private struct NotificationSettingsTab: View {
     @ObservedObject private var preferences: PreferencesManager = .shared
+    @State private var permissionDenied = false
 
     var body: some View {
         Form {
             Section {
                 Toggle("Notify when audio quality drops", isOn: $preferences.notifyOnQualityDrop)
+                    .onChange(of: preferences.notifyOnQualityDrop) { _, enabled in
+                        if enabled { requestPermissionIfNeeded() }
+                    }
                 Toggle("Notify when audio quality restores", isOn: $preferences.notifyOnQualityRestore)
+                    .onChange(of: preferences.notifyOnQualityRestore) { _, enabled in
+                        if enabled { requestPermissionIfNeeded() }
+                    }
             } header: {
                 Text("Quality Alerts")
             } footer: {
-                Text("Notifications require permission in System Settings → Notifications.")
+                if permissionDenied {
+                    HStack(spacing: 4) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(.orange)
+                        Text("Notifications are blocked.")
+                        Button("Open System Settings") {
+                            if let url = URL(string: "x-apple.systempreferences:com.apple.Notifications-Settings") {
+                                NSWorkspace.shared.open(url)
+                            }
+                        }
+                    }
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                } else {
+                    Text("Notifications require permission in System Settings → Notifications.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
             }
         }
         .formStyle(.grouped)
         .padding()
+        .onAppear { checkPermissionStatus() }
+    }
+
+    private func requestPermissionIfNeeded() {
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert]) { granted, _ in
+            DispatchQueue.main.async {
+                permissionDenied = !granted
+            }
+        }
+    }
+
+    private func checkPermissionStatus() {
+        UNUserNotificationCenter.current().getNotificationSettings { settings in
+            DispatchQueue.main.async {
+                permissionDenied = settings.authorizationStatus == .denied
+            }
+        }
     }
 }
 

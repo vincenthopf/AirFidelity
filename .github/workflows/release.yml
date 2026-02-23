@@ -46,7 +46,7 @@ jobs:
 
           security list-keychain -d user -s $KEYCHAIN_PATH
 
-      - name: Build release archive
+      - name: Build release archive (Universal)
         run: |
           xcodebuild archive \
             -project AirFidelity.xcodeproj \
@@ -56,7 +56,9 @@ jobs:
             CODE_SIGN_STYLE=Manual \
             CODE_SIGN_IDENTITY="Developer ID Application" \
             DEVELOPMENT_TEAM=${{ secrets.TEAM_ID }} \
-            OTHER_CODE_SIGN_FLAGS="--options runtime"
+            OTHER_CODE_SIGN_FLAGS="--options runtime" \
+            ARCHS="arm64 x86_64" \
+            ONLY_ACTIVE_ARCH=NO
 
       - name: Export app from archive
         run: |
