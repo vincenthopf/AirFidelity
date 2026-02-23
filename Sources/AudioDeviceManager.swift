@@ -20,6 +20,7 @@ final class AudioDeviceManager: ObservableObject {
     @Published private(set) var currentInputDeviceName: String = "None"
     @Published private(set) var qualityState: AudioQualityState = .disconnected
     @Published private(set) var isBluetoothOutputConnected: Bool = false
+    @Published private(set) var currentCodecInfo: CodecInfo?
 
     // MARK: - Dependencies
 
@@ -262,6 +263,12 @@ final class AudioDeviceManager: ObservableObject {
             qualityState = .callMode
         } else {
             qualityState = detectCodecQuality()
+        }
+
+        if let output = audioSystem.defaultOutputDevice {
+            currentCodecInfo = CodecInfo(from: output)
+        } else {
+            currentCodecInfo = nil
         }
     }
 
