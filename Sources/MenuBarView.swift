@@ -1,63 +1,79 @@
 import SwiftUI
 
 /// Popover content shown when clicking the menu bar icon.
+///
+/// Layout: Status Hero -> Device Info -> Controls -> Footer
 struct MenuBarView: View {
     @ObservedObject var deviceManager: AudioDeviceManager
     @ObservedObject var preferences: PreferencesManager = .shared
     @State private var availableInputs: [(name: String, uid: String)] = []
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Status header
-            statusSection
+        VStack(alignment: .leading, spacing: 16) {
+            statusHeroSection
 
-            Divider()
+            GroupBox {
+                deviceInfoSection
+            }
 
-            // Device info
-            deviceInfoSection
+            GroupBox {
+                controlsSection
+            }
 
-            Divider()
-
-            // Controls
-            controlsSection
-
-            Divider()
-
-            // Settings
-            settingsSection
+            footerSection
         }
         .padding(16)
-        .frame(width: 300)
+        .frame(width: 320)
         .onAppear {
             availableInputs = deviceManager.availableInputDevices()
         }
     }
 
-    // MARK: - Sections
+    // MARK: - Status Hero
 
-    private var statusSection: some View {
-        HStack {
-            Circle()
-                .fill(statusColor)
-                .frame(width: 8, height: 8)
-            Text(deviceManager.qualityState.rawValue)
-                .font(.headline)
-            Spacer()
+    private var statusHeroSection: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(statusColor)
+                    .frame(width: 10, height: 10)
+                Text(deviceManager.qualityState.rawValue)
+                    .font(.headline)
+            }
+
+            if let codecInfo = deviceManager.currentCodecInfo {
+                Text(codecInfo.summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+            }
         }
+        .animation(.smooth, value: deviceManager.qualityState)
     }
+
+    // MARK: - Device Info
 
     private var deviceInfoSection: some View {
         VStack(alignment: .leading, spacing: 6) {
             LabeledRow(label: "Output", value: deviceManager.currentOutputDeviceName)
             LabeledRow(label: "Input", value: deviceManager.currentInputDeviceName)
         }
+        .padding(.vertical, 2)
     }
 
+    // MARK: - Controls
+
     private var controlsSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Button("Fix Now") {
-                deviceManager.fixNow()
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle("Auto-switch input", isOn: $preferences.autoSwitchingEnabled)
+                .toggleStyle(.switch)
+
+            Button(action: { deviceManager.fixNow() }) {
+                Text("Fix Now")
+                    .frame(maxWidth: .infinity)
             }
+            .buttonStyle(.borderedProminent)
+            .controlSize(.large)
             .disabled(deviceManager.qualityState == .disconnected)
 
             Picker("Input Device", selection: $preferences.preferredInputDeviceUID) {
@@ -73,26 +89,27 @@ struct MenuBarView: View {
                 }
             }
         }
+        .padding(.vertical, 2)
     }
 
-    private var settingsSection: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Toggle("Auto-switch input", isOn: $preferences.autoSwitchingEnabled)
+    // MARK: - Footer
 
-            Toggle("Launch at login", isOn: $preferences.launchAtLogin)
-                .onChange(of: preferences.launchAtLogin) { _, enabled in
-                    LaunchAtLoginManager.setEnabled(enabled)
-                }
-
-            HStack {
-                Spacer()
-                Button("Quit") {
-                    NSApplication.shared.terminate(nil)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .font(.caption)
+    private var footerSection: some View {
+        HStack {
+            Button(action: openSettings) {
+                Image(systemName: "gear")
+                    .foregroundStyle(.secondary)
             }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            Button("Quit") {
+                NSApplication.shared.terminate(nil)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(.secondary)
+            .font(.caption)
         }
     }
 
@@ -105,6 +122,13 @@ struct MenuBarView: View {
         case .disconnected: .gray
         case .unknown: .yellow
         }
+    }
+
+    private func openSettings() {
+        // Open the Settings window via the standard macOS mechanism
+        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
+        // Bring the app to front so the settings window is visible
+        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
