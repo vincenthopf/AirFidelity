@@ -4,6 +4,10 @@ import SwiftUI
 struct AirFidelityApp: App {
     @StateObject private var deviceManager = AudioDeviceManager()
 
+    init() {
+        QualityNotificationManager.requestPermission()
+    }
+
     var body: some Scene {
         MenuBarExtra {
             MenuBarView(deviceManager: deviceManager)
@@ -11,22 +15,29 @@ struct AirFidelityApp: App {
             menuBarLabel
         }
         .menuBarExtraStyle(.window)
+
+        Settings {
+            SettingsView()
+        }
     }
 
-    /// Menu bar icon — uses SF Symbols, shows only when BT audio is connected.
+    /// Menu bar icon — uses SF Symbols, shows codec info when enabled.
     private var menuBarLabel: some View {
-        Group {
+        HStack(spacing: 4) {
             if deviceManager.isBluetoothOutputConnected {
                 Image(systemName: iconName)
                     .symbolRenderingMode(.hierarchical)
             } else {
-                // Empty view hides the menu bar item when no BT audio connected.
-                // Note: MenuBarExtra always shows an icon — we use a minimal
-                // representation when inactive. Full hiding requires
-                // programmatic MenuBarExtra visibility toggling.
                 Image(systemName: "headphones")
                     .symbolRenderingMode(.hierarchical)
                     .opacity(0.3)
+            }
+
+            if PreferencesManager.shared.showCodecInMenuBar,
+               let codecInfo = deviceManager.currentCodecInfo {
+                Text(codecInfo.codecName)
+                    .font(.caption2)
+                    .monospacedDigit()
             }
         }
     }
