@@ -27,6 +27,7 @@ final class AudioDeviceManager: ObservableObject {
     let audioSystem: AudioSystemProviding
     let preferences: PreferencesManager
     let micMonitor: MicrophoneUsageMonitor
+    let notificationManager: QualityNotificationManager
 
     /// Debounce tracking to avoid reacting to duplicate CoreAudio events.
     private var lastSwitchTime: Date = .distantPast
@@ -56,6 +57,7 @@ final class AudioDeviceManager: ObservableObject {
         self.pollingInterval = pollingInterval
         self.debounceInterval = debounceInterval
         self.micMonitor = MicrophoneUsageMonitor(cooldownDuration: cooldownDuration)
+        self.notificationManager = QualityNotificationManager(preferences: preferences)
 
         setupCallbackHandlers()
         setupAudioSystemCallbacks()
@@ -100,7 +102,14 @@ final class AudioDeviceManager: ObservableObject {
 
     private func setupCallbackHandlers() {
         micMonitor.onCallStarted = { [weak self] in
-            self?.qualityState = .callMode
+            guard let self else { return }
+            let old = self.qualityState
+            self.qualityState = .callMode
+            self.notificationManager.qualityDidChange(
+                from: old,
+                to: .callMode,
+                deviceName: self.currentOutputDeviceName
+            )
         }
         micMonitor.onCallEnded = { [weak self] in
             self?.handleCallEnded()
@@ -256,6 +265,8 @@ final class AudioDeviceManager: ObservableObject {
 
         isBluetoothOutputConnected = hasBluetoothOutput
 
+        let oldQualityState = qualityState
+
         if !hasBluetoothOutput {
             qualityState = .disconnected
             stopMonitoring()
@@ -263,6 +274,14 @@ final class AudioDeviceManager: ObservableObject {
             qualityState = .callMode
         } else {
             qualityState = detectCodecQuality()
+        }
+
+        if oldQualityState != qualityState {
+            notificationManager.qualityDidChange(
+                from: oldQualityState,
+                to: qualityState,
+                deviceName: currentOutputDeviceName
+            )
         }
 
         if let output = audioSystem.defaultOutputDevice {
