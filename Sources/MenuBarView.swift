@@ -26,6 +26,11 @@ struct MenuBarView: View {
         .frame(width: 320)
         .onAppear {
             availableInputs = deviceManager.availableInputDevices()
+            // Reset stale selection if the saved device is no longer available
+            let currentUID = preferences.preferredInputDeviceUID
+            if !currentUID.isEmpty && !availableInputs.contains(where: { $0.uid == currentUID }) {
+                preferences.preferredInputDeviceUID = ""
+            }
         }
     }
 
@@ -96,7 +101,7 @@ struct MenuBarView: View {
 
     private var footerSection: some View {
         HStack {
-            Button(action: openSettings) {
+            SettingsLink {
                 Image(systemName: "gear")
                     .foregroundStyle(.secondary)
             }
@@ -122,13 +127,6 @@ struct MenuBarView: View {
         case .disconnected: .gray
         case .unknown: .yellow
         }
-    }
-
-    private func openSettings() {
-        // Open the Settings window via the standard macOS mechanism
-        NSApp.sendAction(Selector(("showSettingsWindow:")), to: nil, from: nil)
-        // Bring the app to front so the settings window is visible
-        NSApp.activate(ignoringOtherApps: true)
     }
 }
 
