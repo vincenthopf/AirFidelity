@@ -17,10 +17,27 @@ final class PreferencesManager: ObservableObject {
         didSet { defaults.set(preferredInputDeviceUID, forKey: Keys.preferredInput) }
     }
 
+    @Published var showCodecInMenuBar: Bool {
+        didSet { defaults.set(showCodecInMenuBar, forKey: Keys.showCodecInMenuBar) }
+    }
+    @Published var notifyOnQualityDrop: Bool {
+        didSet { defaults.set(notifyOnQualityDrop, forKey: Keys.notifyOnQualityDrop) }
+    }
+    @Published var notifyOnQualityRestore: Bool {
+        didSet { defaults.set(notifyOnQualityRestore, forKey: Keys.notifyOnQualityRestore) }
+    }
+    @Published var deviceInputMapping: [String: String] {
+        didSet { defaults.set(deviceInputMapping, forKey: Keys.deviceInputMapping) }
+    }
+
     private enum Keys {
         static let autoSwitching = "autoSwitchingEnabled"
         static let launchAtLogin = "launchAtLogin"
         static let preferredInput = "preferredInputDeviceUID"
+        static let showCodecInMenuBar = "showCodecInMenuBar"
+        static let notifyOnQualityDrop = "notifyOnQualityDrop"
+        static let notifyOnQualityRestore = "notifyOnQualityRestore"
+        static let deviceInputMapping = "deviceInputMapping"
     }
 
     init(defaults: UserDefaults = .standard) {
@@ -33,6 +50,10 @@ final class PreferencesManager: ObservableObject {
         }
         self.launchAtLogin = defaults.bool(forKey: Keys.launchAtLogin)
         self.preferredInputDeviceUID = defaults.string(forKey: Keys.preferredInput) ?? ""
+        self.showCodecInMenuBar = defaults.bool(forKey: Keys.showCodecInMenuBar)
+        self.notifyOnQualityDrop = defaults.bool(forKey: Keys.notifyOnQualityDrop)
+        self.notifyOnQualityRestore = defaults.bool(forKey: Keys.notifyOnQualityRestore)
+        self.deviceInputMapping = (defaults.dictionary(forKey: Keys.deviceInputMapping) as? [String: String]) ?? [:]
     }
 
     /// Reset all preferences to defaults. Used in tests.
@@ -40,5 +61,9 @@ final class PreferencesManager: ObservableObject {
         autoSwitchingEnabled = true
         launchAtLogin = false
         preferredInputDeviceUID = ""
+        showCodecInMenuBar = false
+        notifyOnQualityDrop = false
+        notifyOnQualityRestore = false
+        deviceInputMapping = [:]
     }
 }
