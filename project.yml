@@ -29,6 +29,8 @@ targets:
     info:
       path: Sources/Info.plist
       properties:
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         LSUIElement: true
         NSMicrophoneUsageDescription: "AirFidelity needs microphone access to detect when your Mac's audio input changes. No audio is recorded."
         SUFeedURL: "https://vincehopf.github.io/AirFidelity/appcast.xml"
@@ -39,6 +41,8 @@ targets:
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_STYLE: Automatic
         PRODUCT_BUNDLE_IDENTIFIER: com.vincehopf.AirFidelity
+        MARKETING_VERSION: "1.1.0"
+        CURRENT_PROJECT_VERSION: "2"
     entitlements:
       path: AirFidelity.entitlements
 
