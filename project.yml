@@ -11,6 +11,9 @@ packages:
   SimplyCoreAudio:
     url: https://github.com/rnine/SimplyCoreAudio
     from: 4.0.0
+  Sparkle:
+    url: https://github.com/sparkle-project/Sparkle
+    exactVersion: 2.8.1
 
 targets:
   AirFidelity:
@@ -22,15 +25,20 @@ targets:
       - Resources
     dependencies:
       - package: SimplyCoreAudio
+      - package: Sparkle
+    info:
+      path: Sources/Info.plist
+      properties:
+        LSUIElement: true
+        NSMicrophoneUsageDescription: "AirFidelity needs microphone access to detect when your Mac's audio input changes. No audio is recorded."
+        SUFeedURL: "https://vincehopf.github.io/AirFidelity/appcast.xml"
+        SUPublicEDKey: "PLACEHOLDER_UNTIL_KEY_GENERATED"
     settings:
       base:
         SWIFT_VERSION: "5.9"
         MACOSX_DEPLOYMENT_TARGET: "14.0"
         CODE_SIGN_STYLE: Automatic
         PRODUCT_BUNDLE_IDENTIFIER: com.vincehopf.AirFidelity
-        GENERATE_INFOPLIST_FILE: true
-        INFOPLIST_KEY_LSUIElement: true
-        INFOPLIST_KEY_NSMicrophoneUsageDescription: "AirFidelity needs microphone access to detect when your Mac's audio input changes. No audio is recorded."
     entitlements:
       path: AirFidelity.entitlements
 
