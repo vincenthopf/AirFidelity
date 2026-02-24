@@ -3,6 +3,7 @@ import SwiftUI
 @main
 struct AirFidelityApp: App {
     @StateObject private var deviceManager = AudioDeviceManager()
+    @StateObject private var updaterViewModel = UpdaterViewModel()
 
     init() {
         QualityNotificationManager.requestPermission()
@@ -17,7 +18,7 @@ struct AirFidelityApp: App {
         .menuBarExtraStyle(.window)
 
         Settings {
-            SettingsView()
+            SettingsView(updaterViewModel: updaterViewModel)
         }
     }
 

@@ -32,7 +32,7 @@ targets:
         LSUIElement: true
         NSMicrophoneUsageDescription: "AirFidelity needs microphone access to detect when your Mac's audio input changes. No audio is recorded."
         SUFeedURL: "https://vincehopf.github.io/AirFidelity/appcast.xml"
-        SUPublicEDKey: "PLACEHOLDER_UNTIL_KEY_GENERATED"
+        SUPublicEDKey: "tmHJg3zGKt0wPIpA/IKBHOXIM2v/pGH9Qoqfl1bbhH4="
     settings:
       base:
         SWIFT_VERSION: "5.9"

@@ -1,11 +1,14 @@
 import SwiftUI
+import Sparkle
 import UserNotifications
 
 /// Settings window content, shown via Cmd+, or the gear icon in the popover.
 struct SettingsView: View {
+    @ObservedObject var updaterViewModel: UpdaterViewModel
+
     var body: some View {
         TabView {
-            GeneralSettingsTab()
+            GeneralSettingsTab(updaterViewModel: updaterViewModel)
                 .tabItem {
                     Label("General", systemImage: "gear")
                 }
@@ -28,6 +31,7 @@ struct SettingsView: View {
 
 private struct GeneralSettingsTab: View {
     @ObservedObject private var preferences: PreferencesManager = .shared
+    @ObservedObject var updaterViewModel: UpdaterViewModel
 
     var body: some View {
         Form {
@@ -42,6 +46,18 @@ private struct GeneralSettingsTab: View {
 
             Section("Menu Bar") {
                 Toggle("Show codec name next to icon", isOn: $preferences.showCodecInMenuBar)
+            }
+
+            Section("Updates") {
+                Toggle("Automatically check for updates", isOn: Binding(
+                    get: { updaterViewModel.updater.automaticallyChecksForUpdates },
+                    set: { updaterViewModel.updater.automaticallyChecksForUpdates = $0 }
+                ))
+
+                Button("Check for Updates...") {
+                    updaterViewModel.updater.checkForUpdates()
+                }
+                .disabled(!updaterViewModel.canCheckForUpdates)
             }
         }
         .formStyle(.grouped)
