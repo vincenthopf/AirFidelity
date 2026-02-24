@@ -113,9 +113,37 @@ jobs:
             -ov -format UDZO \
             "$RUNNER_TEMP/AirFidelity.dmg"
 
+      - name: Install Sparkle tools
+        run: |
+          SPARKLE_VERSION="2.8.1"
+          curl -L "https://github.com/sparkle-project/Sparkle/releases/download/${SPARKLE_VERSION}/Sparkle-${SPARKLE_VERSION}.tar.xz" \
+            -o /tmp/sparkle.tar.xz
+          mkdir -p /tmp/sparkle
+          tar -xf /tmp/sparkle.tar.xz -C /tmp/sparkle
+
       - name: Get version from tag
         id: version
         run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Sign DMG with Sparkle EdDSA
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          echo "$SPARKLE_PRIVATE_KEY" | /tmp/sparkle/bin/sign_update "$RUNNER_TEMP/AirFidelity.dmg" --ed-key-file -
+
+      - name: Generate appcast
+        env:
+          SPARKLE_PRIVATE_KEY: ${{ secrets.SPARKLE_PRIVATE_KEY }}
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          mkdir -p /tmp/release-archives
+          cp "$RUNNER_TEMP/AirFidelity.dmg" /tmp/release-archives/
+          echo "$SPARKLE_PRIVATE_KEY" | /tmp/sparkle/bin/generate_appcast \
+            --ed-key-file - \
+            --download-url-prefix "https://github.com/vincehopf/AirFidelity/releases/download/${VERSION}/" \
+            --link "https://github.com/vincehopf/AirFidelity/releases" \
+            -o /tmp/appcast.xml \
+            /tmp/release-archives
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
@@ -123,6 +151,15 @@ jobs:
           name: AirFidelity ${{ steps.version.outputs.version }}
           files: ${{ runner.temp }}/AirFidelity.dmg
           generate_release_notes: true
+
+      - name: Update appcast.xml
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp /tmp/appcast.xml docs/appcast.xml
+          git add docs/appcast.xml
+          git commit -m "chore: update appcast for ${{ steps.version.outputs.version }}" || echo "No changes"
+          git push origin HEAD:main
 
       - name: Clean up keychain
         if: always()
